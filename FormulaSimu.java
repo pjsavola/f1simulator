@@ -2,25 +2,17 @@ package simu;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Font;
-import java.awt.GridBagConstraints;
-import java.awt.GridBagLayout;
 import java.awt.GridLayout;
-import java.awt.Insets;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
-import java.io.File;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Random;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
-import javax.swing.JTextField;
 import javax.swing.WindowConstants;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.LineBorder;
@@ -61,7 +53,7 @@ public class FormulaSimu extends JPanel {
 	}
 	
 	public static void main(String[] args) {
-		Track spa = new Track(getLapTimeMs(1, 44));
+		Track track = new Track(getLapTimeMs(1, 44), 500);
 		//Driver lewis = new Driver("Lewis", "Hamilton", 95, 95);
 		//Driver max = new Driver("Max", "Verstappen", 96, 93);
 		
@@ -79,13 +71,15 @@ public class FormulaSimu extends JPanel {
         initTextField(header, 40, "POS", Color.LIGHT_GRAY, Color.BLACK, headerFont).setHorizontalAlignment(JLabel.CENTER);
         initTextField(header, 120, "NAME", Color.LIGHT_GRAY, Color.BLACK, headerFont);
         initTextField(header, 100, "TIME", Color.LIGHT_GRAY, Color.BLACK, headerFont);
-        initTextField(header, 100, "GAP", Color.LIGHT_GRAY, Color.BLACK, headerFont);
+        initTextField(header, 100, "INTERVAL", Color.LIGHT_GRAY, Color.BLACK, headerFont);
+		initTextField(header, 100, "GAP", Color.LIGHT_GRAY, Color.BLACK, headerFont);
         p.add(header);
 
 		final Driver[] drivers = new Driver[20];
 		JLabel[] posFields = new JLabel[drivers.length];
 		JLabel[] driverFields = new JLabel[drivers.length];
 		JLabel[] infoFields = new JLabel[drivers.length];
+		JLabel[] intervalFields = new JLabel[drivers.length];
 		JLabel[] gapFields = new JLabel[drivers.length];
 		for (int i = 0; i < drivers.length; ++i) {
 			JPanel row = new JPanel();
@@ -93,18 +87,19 @@ public class FormulaSimu extends JPanel {
 			row.setBackground(color);
 			posFields[i] = initTextField(row, 40, Integer.toString(i + 1), Color.CYAN, color, textFont);
 			posFields[i].setHorizontalAlignment(JLabel.CENTER);
-			drivers[i] = new Driver(Character.toString((char) ('A' + i)), "Player", 100 - i, 80 + i);
+			drivers[i] = new Driver(Character.toString((char) ('A' + i)), "Player", 80 + i, 100 - i);
 			driverFields[i] = initTextField(row, 120, drivers[i].getName(), Color.WHITE, color, textFont);
 			infoFields[i] = initTextField(row, 100, "-", Color.WHITE, color, textFont);
+			intervalFields[i] = initTextField(row, 100, "-", Color.WHITE, color, textFont);
 			gapFields[i] = initTextField(row, 100, "-", Color.WHITE, color, textFont);
 			p.add(row);
 		}
-		prevStandings = new Standings(drivers);
+		prevStandings = new Standings(track, drivers);
 		prevStandings.resolve(false);
 
         GridLayout layout = new GridLayout(drivers.length + 1, 1);
         p.setLayout(layout);
-		p.setPreferredSize(new Dimension(390, 550));
+		p.setPreferredSize(new Dimension(495, 550));
         f.addKeyListener(new KeyListener() {
 			@Override
 			public void keyTyped(KeyEvent e) {
@@ -117,26 +112,30 @@ public class FormulaSimu extends JPanel {
 				if (e.getKeyCode() == KeyEvent.VK_ENTER) {
 					++lap;
 					Standings s = new Standings(prevStandings);
+					for (int i = 0; i < drivers.length; ++i) {
+						int time = drivers[i].getLapTime(track);
+						if (lap == 1) time += 5000;
+						s.addTime(drivers[i], time);
+					}
+					s.resolve(true);
 
 					int bestLap = prevStandings.getBestLap();
 					Driver newBestLapDriver = null;
 					Set<Driver> personalBests = new HashSet<>();
-					for (int i = 0; i < drivers.length; ++i) {
-						int personalBest = Arrays.stream(prevStandings.getTimes(drivers[i])).min().orElse(Integer.MAX_VALUE);
-						//System.err.println(Arrays.stream(prevStandings.getTimes(drivers[i])).boxed().map(j -> lapTimeToString(j)).collect(Collectors.toList()).toString());
-						int time = drivers[i].getLapTime(spa);
-						if (time < personalBest) {
-							personalBests.add(drivers[i]);
-							if (time < bestLap) {
-								bestLap = time;
-								newBestLapDriver = drivers[i];
+					for (Driver driver : drivers) {
+						int personalBest = Arrays.stream(prevStandings.getTimes(driver)).min().orElse(Integer.MAX_VALUE);
+						int best = Arrays.stream(s.getTimes(driver)).min().orElse(Integer.MAX_VALUE);
+						if (best < personalBest) {
+							personalBests.add(driver);
+							if (best < bestLap) {
+								bestLap = best;
+								newBestLapDriver = driver;
 							}
 						}
-						s.addTime(drivers[i], time);
 					}
 					if (newBestLapDriver != null)
 						System.err.println("Best lap: " + lapTimeToString(bestLap) + " by " + newBestLapDriver.getName());
-					s.resolve(true);
+
 					for (int i = 0; i < drivers.length; ++i) {
 						driverFields[i].setText(s.getName(i));
 						infoFields[i].setText(s.getTime(i));
@@ -144,8 +143,10 @@ public class FormulaSimu extends JPanel {
 						if (s.getDriver(i) == newBestLapDriver) color = Color.MAGENTA;
 						else if (personalBests.contains(s.getDriver(i))) color = Color.GREEN;
 						infoFields[i].setForeground(color);
+						intervalFields[i].setText(s.getInterval(i));
 						gapFields[i].setText(s.getGap(i));
 					}
+					p.repaint();
 					prevStandings = s;
 				}
 			}

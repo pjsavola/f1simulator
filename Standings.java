@@ -1,7 +1,6 @@
 package simu;
 
 import java.util.Arrays;
-import java.util.List;
 import java.util.function.Function;
 
 public class Standings {
@@ -17,12 +16,15 @@ public class Standings {
 			this.dnf = dnf;
 		}
 	}
+
+	private final Track track;
 	private final int len;
 	private LapData[] lapData;
 	private final Standings previous;
 	private int bestLap = Integer.MAX_VALUE;
 	
-	public Standings(Driver[] drivers) {
+	public Standings(Track track, Driver[] drivers) {
+		this.track = track;
 		len = drivers.length;
 		lapData = new LapData[len];
 		for (int i = 0; i < len; ++i) {
@@ -32,6 +34,7 @@ public class Standings {
 	}
 
 	public Standings(Standings s) {
+		track = s.track;
 		len = s.len;
 		lapData = new LapData[len];
 		for (int i = 0; i < len; ++i) {
@@ -74,31 +77,37 @@ public class Standings {
 				for (int j = i + 1; j < len; ++j) {
 					int aGap = lapData[i].gap;
 					int bGap = lapData[j].gap;
-					if (Math.abs(aGap - bGap) < 500) {
+					final int limit = track.getOvertakingGap();
+					if (bGap - aGap < limit) {
 						// Battle between a and b
 						final Driver a = lapData[i].driver;
 						final Driver b = lapData[j].driver;
-						boolean aWasAhead = aGap - lapData[i].time < bGap - lapData[j].time;
-						int aStat = aWasAhead ? 250 : 250;
-						int bStat = aWasAhead ? 250 : 250;
-						int aRandom = FormulaSimu.random.nextInt(500);
-						int bRandom = FormulaSimu.random.nextInt(500);
-						int aTotal = aRandom + aStat - aGap;
-						int bTotal = bRandom + bStat - bGap;
-						int delta = Math.abs(aTotal - bTotal);
-						int loss = 1500 - 3 * delta;
-						if (loss > 0) {
-							loss = FormulaSimu.random.nextInt(loss);
-							int extraLoss = loss + FormulaSimu.random.nextInt(500);
-							losses[i] = aTotal > bTotal ? loss : extraLoss;
-							losses[j] = aTotal > bTotal ? extraLoss : loss;
+
+						if (bGap > aGap) {
+							// B is chasing A but not yet overtaking, both lose a bit of time.
+							int maxPenalty = limit - bGap + aGap;
+							int bLoss = FormulaSimu.random.nextInt(maxPenalty - maxPenalty * b.getOvertaking() / 200);
+							if (bLoss > 0) {
+								int aLoss = FormulaSimu.random.nextInt(bLoss - bLoss * a.getDefense() / 200);
+								//System.err.println(b.getName() + " chases " + a.getName() + ", losses: " + bLoss + ", " + aLoss);
+								losses[i] += aLoss;
+								losses[j] += bLoss;
+							}
+						} else {
+							// B tries to overtake A, let's check if it succeeds. Both also lose some time.
+							int bLoss = FormulaSimu.random.nextInt(2 * limit - limit * b.getOvertaking() / 100);
+							int aLoss = FormulaSimu.random.nextInt(2 * limit - limit * a.getDefense() / 100);
+							//System.err.println(b.getName() + " tries to overtake " + a.getName() + ", losses: " + bLoss + ", " + aLoss);
+							losses[i] += aLoss;
+							losses[j] += bLoss;
 						}
 					}
 				}
 			}
 			for (int i = 0; i < len; ++i) {
-				System.err.println("Losses for " + lapData[i].driver.getName() + ": " + losses[i]);
+				//System.err.println("Losses for " + lapData[i].driver.getName() + ": " + losses[i]);
 				lapData[i].gap += losses[i];
+				lapData[i].time += losses[i];
 			}
 		}
 		int minGap = Arrays.stream(lapData).mapToInt(d -> d.gap).min().orElse(0);
@@ -106,6 +115,18 @@ public class Standings {
 			lapData[i].gap -= minGap;
 		}
 		lapData = Arrays.stream(lapData).sorted((d1, d2) -> d1.gap - d2.gap).toArray(LapData[]::new);
+
+		if (includeLosses) {
+			for (int i = 1; i < len; ++i) {
+				int delta = lapData[i].gap - lapData[i - 1].gap;
+				if (delta < track.getOvertakingGap()) {
+					int loss = FormulaSimu.random.nextInt(track.getOvertakingGap()) - Math.min(0, delta);
+					//System.err.println("Queue losses for " + lapData[i].driver.getName() + ": " + loss);
+					lapData[i].gap += loss;
+					lapData[i].time += loss;
+				}
+			}
+		}
 	}
 
 	public String getName(int pos) {
@@ -120,10 +141,16 @@ public class Standings {
 		return FormulaSimu.lapTimeToString(lapData[pos].time);
 	}
 
-	public String getGap(int pos) {
+	public String getInterval(int pos) {
 		if (pos == 0) return "Interval";
 
 		return FormulaSimu.gapToString(lapData[pos].gap - lapData[pos - 1].gap);
+	}
+
+	public String getGap(int pos) {
+		if (pos == 0) return "Leader";
+
+		return FormulaSimu.gapToString(lapData[pos].gap);
 	}
 
 	private int getCompletedLapCount() {

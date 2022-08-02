@@ -7,6 +7,8 @@ public class Driver {
 	private final String surname;
 	private final int skill;
 	private final int consistency;
+	private final int defense = 80;
+	private final int overtaking = 80;
 	private Random r = FormulaSimu.random;
 
 	public Driver(String firstName, String surname, int skill, int consistency) {
@@ -19,7 +21,7 @@ public class Driver {
 	public int getLapTime(Track track) {
 		double standardDeviation = 1000 - 7.5 * consistency;
 		int idealLapTimeMs = track.getIdealLapTimeMs();
-		int lapTimeMs = idealLapTimeMs * 1100 / 1000 - idealLapTimeMs * skill / 1000;
+		int lapTimeMs = idealLapTimeMs * 1050 / 1000 - idealLapTimeMs * skill / 2000;
 		boolean push = skill > r.nextInt(1000);
 		double randomness = Math.abs(r.nextGaussian());
 		randomness *= push ? -200 : standardDeviation;
@@ -28,5 +30,13 @@ public class Driver {
 	
 	public String getName() {
 		return firstName.substring(0, 1) + ". " + surname.toUpperCase();
+	}
+
+	public int getDefense() {
+		return defense;
+	}
+
+	public int getOvertaking() {
+		return overtaking;
 	}
 }
