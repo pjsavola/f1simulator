@@ -8,12 +8,12 @@ public class Standings {
 		private final Driver driver;
 		private int time;
 		private int gap;
-		private boolean dnf;
-		private LapData(Driver driver, int time, int gap, boolean dnf) {
+		private int dnfPos;
+		private LapData(Driver driver, int time, int gap, int dnfPos) {
 			this.driver = driver;
 			this.time = time;
 			this.gap = gap;
-			this.dnf = dnf;
+			this.dnfPos = dnfPos;
 		}
 	}
 
@@ -28,7 +28,7 @@ public class Standings {
 		len = drivers.length;
 		lapData = new LapData[len];
 		for (int i = 0; i < len; ++i) {
-			lapData[i] = new LapData(drivers[i], 0, i * 200, false);
+			lapData[i] = new LapData(drivers[i], 0, i * 200, -1);
 		}
 		previous = null;
 	}
@@ -38,7 +38,7 @@ public class Standings {
 		len = s.len;
 		lapData = new LapData[len];
 		for (int i = 0; i < len; ++i) {
-			lapData[i] = new LapData(s.lapData[i].driver, s.lapData[i].time, s.lapData[i].gap, s.lapData[i].dnf);
+			lapData[i] = new LapData(s.lapData[i].driver, s.lapData[i].time, s.lapData[i].gap, s.lapData[i].dnfPos);
 		}
 		previous = s;
 		bestLap = s.bestLap;
@@ -47,32 +47,40 @@ public class Standings {
 	public void addTime(Driver driver, int time) {
 		for (int i = 0; i < len; ++i) {
 			if (lapData[i].driver == driver) {
-				lapData[i].time = time;
-				if (time == 0) {
-					lapData[i].dnf = true;
-				}
-				else if (time < bestLap) {
-					bestLap = time;
+				if (lapData[i].dnfPos < 0) {
+					lapData[i].time = time;
+					if (time == 0) {
+						lapData[i].dnfPos = i;
+					}
+				} else {
+					lapData[i].time = 0;
 				}
 				break;
 			}
 		}
 	}
 
-	public void resolve(boolean includeLosses) {
-		int gap = 0;
-		for (int i = 0; i < len; ++i) {
-			if (lapData[i].dnf == false) {
-				gap = lapData[i].gap;
+	private int getRunnerCount() {
+		int len = 0;
+		while (len < this.len) {
+			if (lapData[len].dnfPos >= 0) {
 				break;
 			}
+			++len;
 		}
+		return len;
+	}
+
+	public void resolve(boolean includeLosses) {
+		int len = getRunnerCount();
+		final int gap = lapData[0].gap;
 		for (int i = 0; i < len; ++i) {
 			lapData[i].gap -= gap;
 			lapData[i].gap += lapData[i].time;
 		}
 		if (includeLosses) {
 			int[] losses = new int[len];
+			boolean[] dnfs = new boolean[len];
 			for (int i = 0; i < len; ++i) {
 				for (int j = i + 1; j < len; ++j) {
 					int aGap = lapData[i].gap;
@@ -98,6 +106,29 @@ public class Standings {
 							int bLoss = FormulaSimu.random.nextInt(2 * limit - limit * b.getOvertaking() / 100);
 							int aLoss = FormulaSimu.random.nextInt(2 * limit - limit * a.getDefense() / 100);
 							//System.err.println(b.getName() + " tries to overtake " + a.getName() + ", losses: " + bLoss + ", " + aLoss);
+							int interval = aGap + aLoss - bGap - bLoss;
+							int distanceFactor = Math.max(0, 500 - Math.abs(interval));
+							int skillFactor = Math.max(0, 500 - Math.abs(a.getSkill() - b.getSkill()) * 25);
+							int randomFactor = FormulaSimu.random.nextInt(10000);
+							int randomFactor2 = FormulaSimu.random.nextInt(10000);
+							if (randomFactor < 500 + distanceFactor + skillFactor) {
+								System.err.println(a.getName() + " collides when battling with " + b.getName());
+								if (FormulaSimu.random.nextInt(10) < 2) {
+									dnfs[i] = true;
+								} else {
+									a.adjustSkillModifier(FormulaSimu.random.nextInt(5));
+									aLoss += FormulaSimu.random.nextInt(5000);
+								}
+							}
+							if (randomFactor2 < 500 + distanceFactor + skillFactor) {
+								System.err.println(b.getName() + " collides when battling with " + a.getName());
+								if (FormulaSimu.random.nextInt(10) < 2) {
+									dnfs[j] = true;
+								} else {
+									b.adjustSkillModifier(FormulaSimu.random.nextInt(5));
+									bLoss += FormulaSimu.random.nextInt(5000);
+								}
+							}
 							losses[i] += aLoss;
 							losses[j] += bLoss;
 						}
@@ -108,13 +139,19 @@ public class Standings {
 				//System.err.println("Losses for " + lapData[i].driver.getName() + ": " + losses[i]);
 				lapData[i].gap += losses[i];
 				lapData[i].time += losses[i];
+				if (dnfs[i]) {
+					System.err.println(lapData[i].driver.getName() + " gets DNF");
+					lapData[i].dnfPos = i;
+				}
 			}
 		}
-		int minGap = Arrays.stream(lapData).mapToInt(d -> d.gap).min().orElse(0);
+		lapData = Arrays.stream(lapData).sorted((d1, d2) -> (d1.dnfPos - d2.dnfPos) * 10000000 + d1.gap - d2.gap).toArray(LapData[]::new);
+
+		len = getRunnerCount();
+		int minGap = Arrays.stream(lapData).limit(len).mapToInt(d -> d.gap).min().orElse(0);
 		for (int i = 0; i < len; ++i) {
 			lapData[i].gap -= minGap;
 		}
-		lapData = Arrays.stream(lapData).sorted((d1, d2) -> d1.gap - d2.gap).toArray(LapData[]::new);
 
 		if (includeLosses) {
 			for (int i = 1; i < len; ++i) {
@@ -124,6 +161,9 @@ public class Standings {
 					//System.err.println("Queue losses for " + lapData[i].driver.getName() + ": " + loss);
 					lapData[i].gap += loss;
 					lapData[i].time += loss;
+					if (lapData[i].time < bestLap) {
+						bestLap = lapData[i].time;
+					}
 				}
 			}
 		}
@@ -138,19 +178,30 @@ public class Standings {
 	}
 	
 	public String getTime(int pos) {
+		if (lapData[pos].dnfPos >= 0) return "-";
+
 		return FormulaSimu.lapTimeToString(lapData[pos].time);
 	}
 
 	public String getInterval(int pos) {
 		if (pos == 0) return "Interval";
 
+		if (lapData[pos].dnfPos >= 0) return "DNF";
 		return FormulaSimu.gapToString(lapData[pos].gap - lapData[pos - 1].gap);
 	}
 
 	public String getGap(int pos) {
 		if (pos == 0) return "Leader";
 
+		if (lapData[pos].dnfPos >= 0) return "DNF";
 		return FormulaSimu.gapToString(lapData[pos].gap);
+	}
+
+	public boolean isDnf(Driver driver) {
+		for (int i = 0; i < lapData.length; ++i) {
+			return lapData[i].dnfPos >= 0;
+		}
+		return false;
 	}
 
 	private int getCompletedLapCount() {
@@ -170,6 +221,9 @@ public class Standings {
 		for (int i = 0; i < laps; ++i) {
 			for (int j = 0; j < s.lapData.length; ++j) {
 				if (s.lapData[j].driver == driver) {
+					if (s.lapData[j].dnfPos >= 0) {
+						return Arrays.stream(data).limit(i).toArray();
+					}
 					data[laps - 1 - i] = f.apply(s.lapData[j]);
 					break;
 				}

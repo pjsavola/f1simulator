@@ -140,6 +140,7 @@ public class FormulaSimu extends JPanel {
 						driverFields[i].setText(s.getName(i));
 						infoFields[i].setText(s.getTime(i));
 						Color color = Color.YELLOW;
+						if (s.isDnf(s.getDriver(i))) color = Color.WHITE;
 						if (s.getDriver(i) == newBestLapDriver) color = Color.MAGENTA;
 						else if (personalBests.contains(s.getDriver(i))) color = Color.GREEN;
 						infoFields[i].setForeground(color);
