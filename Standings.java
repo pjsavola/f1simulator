@@ -81,6 +81,7 @@ public class Standings {
 		if (includeLosses) {
 			int[] losses = new int[len];
 			boolean[] dnfs = new boolean[len];
+			int newDnfs = 0;
 			for (int i = 0; i < len; ++i) {
 				for (int j = i + 1; j < len; ++j) {
 					int aGap = lapData[i].gap;
@@ -114,18 +115,20 @@ public class Standings {
 							if (randomFactor < 500 + distanceFactor + skillFactor) {
 								System.err.println(a.getName() + " collides when battling with " + b.getName());
 								if (FormulaSimu.random.nextInt(10) < 2) {
+									if (!dnfs[i]) ++newDnfs;
 									dnfs[i] = true;
 								} else {
-									a.adjustSkillModifier(FormulaSimu.random.nextInt(5));
+									a.addDamage(FormulaSimu.random.nextInt(5));
 									aLoss += FormulaSimu.random.nextInt(5000);
 								}
 							}
 							if (randomFactor2 < 500 + distanceFactor + skillFactor) {
 								System.err.println(b.getName() + " collides when battling with " + a.getName());
 								if (FormulaSimu.random.nextInt(10) < 2) {
+									if (!dnfs[j]) ++newDnfs;
 									dnfs[j] = true;
 								} else {
-									b.adjustSkillModifier(FormulaSimu.random.nextInt(5));
+									b.addDamage(FormulaSimu.random.nextInt(5));
 									bLoss += FormulaSimu.random.nextInt(5000);
 								}
 							}
@@ -140,8 +143,10 @@ public class Standings {
 				lapData[i].gap += losses[i];
 				lapData[i].time += losses[i];
 				if (dnfs[i]) {
-					System.err.println(lapData[i].driver.getName() + " gets DNF");
-					lapData[i].dnfPos = i;
+					int pos = len - newDnfs;
+					--newDnfs;
+					System.err.println(lapData[i].driver.getName() + " gets DNF and position " + pos);
+					lapData[i].dnfPos = pos;
 				}
 			}
 		}
@@ -191,7 +196,7 @@ public class Standings {
 	}
 
 	public String getGap(int pos) {
-		if (pos == 0) return "Leader";
+		if (pos == 0) return "Lap " + getCompletedLapCount() + "/" + track.getLapCount();
 
 		if (lapData[pos].dnfPos >= 0) return "DNF";
 		return FormulaSimu.gapToString(lapData[pos].gap);
@@ -204,7 +209,7 @@ public class Standings {
 		return false;
 	}
 
-	private int getCompletedLapCount() {
+	public int getCompletedLapCount() {
 		int laps = 0;
 		Standings prev = previous;
 		while (prev != null) {

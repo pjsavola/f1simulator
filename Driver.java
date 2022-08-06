@@ -6,10 +6,10 @@ public class Driver {
 	private final String firstName;
 	private final String surname;
 	private final int skill;
-	private int skillModifier;
 	private final int consistency;
 	private final int defense = 80;
 	private final int overtaking = 80;
+	private final Car car = new Car();
 	private Random r = FormulaSimu.random;
 
 	public Driver(String firstName, String surname, int skill, int consistency) {
@@ -42,10 +42,10 @@ public class Driver {
 	}
 
 	public int getSkill() {
-		return skill + skillModifier;
+		return skill * car.getCondition() / 100;
 	}
 
-	public void adjustSkillModifier(int modifier) {
-		skillModifier -= modifier;
+	public void addDamage(int damage) {
+		car.addDamage(damage);
 	}
 }

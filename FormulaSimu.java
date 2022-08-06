@@ -5,10 +5,7 @@ import java.awt.Font;
 import java.awt.GridLayout;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.Random;
-import java.util.Set;
+import java.util.*;
 
 import javax.swing.JFrame;
 import javax.swing.JLabel;
@@ -19,9 +16,6 @@ import javax.swing.border.LineBorder;
 
 public class FormulaSimu extends JPanel {
 	
-	private int row = 0;
-	private int col = 0;
-	private static int lap = 0;
 	private static Standings prevStandings;
 
 	public static Random random = new Random();
@@ -53,7 +47,8 @@ public class FormulaSimu extends JPanel {
 	}
 	
 	public static void main(String[] args) {
-		Track track = new Track(getLapTimeMs(1, 44), 500);
+		final int lapCount = 44;
+		Track track = new Track(lapCount, getLapTimeMs(1, 44), 500);
 		//Driver lewis = new Driver("Lewis", "Hamilton", 95, 95);
 		//Driver max = new Driver("Max", "Verstappen", 96, 93);
 		
@@ -73,6 +68,7 @@ public class FormulaSimu extends JPanel {
         initTextField(header, 100, "TIME", Color.LIGHT_GRAY, Color.BLACK, headerFont);
         initTextField(header, 100, "INTERVAL", Color.LIGHT_GRAY, Color.BLACK, headerFont);
 		initTextField(header, 100, "GAP", Color.LIGHT_GRAY, Color.BLACK, headerFont);
+		initTextField(header, 100, "SPEED", Color.LIGHT_GRAY, Color.BLACK, headerFont);
         p.add(header);
 
 		final Driver[] drivers = new Driver[20];
@@ -81,6 +77,7 @@ public class FormulaSimu extends JPanel {
 		JLabel[] infoFields = new JLabel[drivers.length];
 		JLabel[] intervalFields = new JLabel[drivers.length];
 		JLabel[] gapFields = new JLabel[drivers.length];
+		JLabel[] speedFields = new JLabel[drivers.length];
 		for (int i = 0; i < drivers.length; ++i) {
 			JPanel row = new JPanel();
 			Color color = i % 2 == 0 ? bgColor : Color.BLACK;
@@ -92,6 +89,7 @@ public class FormulaSimu extends JPanel {
 			infoFields[i] = initTextField(row, 100, "-", Color.WHITE, color, textFont);
 			intervalFields[i] = initTextField(row, 100, "-", Color.WHITE, color, textFont);
 			gapFields[i] = initTextField(row, 100, "-", Color.WHITE, color, textFont);
+			speedFields[i] = initTextField(row, 100, Integer.toString(drivers[i].getSkill()), Color.WHITE, color, textFont);
 			p.add(row);
 		}
 		prevStandings = new Standings(track, drivers);
@@ -99,7 +97,8 @@ public class FormulaSimu extends JPanel {
 
         GridLayout layout = new GridLayout(drivers.length + 1, 1);
         p.setLayout(layout);
-		p.setPreferredSize(new Dimension(495, 550));
+		p.setPreferredSize(new Dimension(600, 550));
+		Map<Driver, Integer> prevSpeeds = new HashMap<>();
         f.addKeyListener(new KeyListener() {
 			@Override
 			public void keyTyped(KeyEvent e) {
@@ -110,11 +109,13 @@ public class FormulaSimu extends JPanel {
 			@Override
 			public void keyPressed(KeyEvent e) {
 				if (e.getKeyCode() == KeyEvent.VK_ENTER) {
-					++lap;
+					int lap = prevStandings.getCompletedLapCount();
+					if (lapCount == lap) return;
+
 					Standings s = new Standings(prevStandings);
 					for (int i = 0; i < drivers.length; ++i) {
 						int time = drivers[i].getLapTime(track);
-						if (lap == 1) time += 5000;
+						if (lap == 0) time += 5000;
 						s.addTime(drivers[i], time);
 					}
 					s.resolve(true);
@@ -146,6 +147,16 @@ public class FormulaSimu extends JPanel {
 						infoFields[i].setForeground(color);
 						intervalFields[i].setText(s.getInterval(i));
 						gapFields[i].setText(s.getGap(i));
+						color = Color.WHITE;
+						int newSpeed = s.getDriver(i).getSkill();
+						Integer oldSpeed = prevSpeeds.get(s.getDriver(i));
+						if (oldSpeed != null) {
+							if (oldSpeed < newSpeed) color = Color.GREEN;
+							else if (oldSpeed > newSpeed) color = Color.RED;
+						}
+						speedFields[i].setText(Integer.toString(newSpeed));
+						speedFields[i].setForeground(color);
+						prevSpeeds.put(s.getDriver(i), newSpeed);
 					}
 					p.repaint();
 					prevStandings = s;
