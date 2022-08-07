@@ -22,11 +22,11 @@ public class Driver {
 	}
 
 	public int getLapTime(Track track, boolean race) {
-		int skill = race ? this.skill : qualifying;
+		int skill = race ? getSkill() : qualifying;
 		double standardDeviation = 1000 - 7.5 * consistency;
 		int idealLapTimeMs = track.getIdealLapTimeMs();
-		int lapTimeMs = idealLapTimeMs * 1050 / 1000 - idealLapTimeMs * getSkill() / 2000;
-		boolean push = getSkill() > r.nextInt(1000);
+		int lapTimeMs = idealLapTimeMs * 1050 / 1000 - idealLapTimeMs * skill / 2000;
+		boolean push = skill > r.nextInt(1000);
 		double randomness = Math.abs(r.nextGaussian());
 		randomness *= push ? -200 : standardDeviation;
 		return lapTimeMs + (int) randomness;

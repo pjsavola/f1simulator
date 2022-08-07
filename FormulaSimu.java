@@ -113,13 +113,13 @@ public class FormulaSimu extends JPanel {
 			infoFields[i] = initTextField(row, 100, prevStandings.getTime(i), Color.WHITE, color, textFont);
 			intervalFields[i] = initTextField(row, 100, "-", Color.WHITE, color, textFont);
 			gapFields[i] = initTextField(row, 100, "-", Color.WHITE, color, textFont);
-			speedFields[i] = initTextField(row, 100, Integer.toString(drivers[i].getSkill()), Color.WHITE, color, textFont);
+			speedFields[i] = initTextField(row, 100, Integer.toString(prevStandings.getDriver(i).getSkill()), Color.WHITE, color, textFont);
 			p.add(row);
 		}
 
         GridLayout layout = new GridLayout(drivers.length + 1, 1);
         p.setLayout(layout);
-		p.setPreferredSize(new Dimension(600, 550));
+		//p.setPreferredSize(new Dimension(600, 550));
 		Map<Driver, Integer> prevSpeeds = new HashMap<>();
         f.addKeyListener(new KeyListener() {
 			@Override
