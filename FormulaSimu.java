@@ -90,6 +90,7 @@ public class FormulaSimu extends JPanel {
         header.setBackground(Color.BLACK);
         initTextField(header, 40, "POS", Color.LIGHT_GRAY, Color.BLACK, headerFont).setHorizontalAlignment(JLabel.CENTER);
         initTextField(header, 120, "NAME", Color.LIGHT_GRAY, Color.BLACK, headerFont);
+        initTextField(header, 40, "MOD", Color.LIGHT_GRAY, Color.BLACK, headerFont);
         initTextField(header, 100, "TIME", Color.LIGHT_GRAY, Color.BLACK, headerFont);
         initTextField(header, 100, "INTERVAL", Color.LIGHT_GRAY, Color.BLACK, headerFont);
 		initTextField(header, 100, "GAP", Color.LIGHT_GRAY, Color.BLACK, headerFont);
@@ -98,6 +99,7 @@ public class FormulaSimu extends JPanel {
 
 		JLabel[] posFields = new JLabel[drivers.length];
 		JLabel[] driverFields = new JLabel[drivers.length];
+		JLabel[] modFields = new JLabel[drivers.length];
 		JLabel[] infoFields = new JLabel[drivers.length];
 		JLabel[] intervalFields = new JLabel[drivers.length];
 		JLabel[] gapFields = new JLabel[drivers.length];
@@ -110,6 +112,8 @@ public class FormulaSimu extends JPanel {
 			posFields[i].setHorizontalAlignment(JLabel.CENTER);
 			//drivers[i] = new Driver(Character.toString((char) ('A' + i)), "Player", 80 + i, 100 - i);
 			driverFields[i] = initTextField(row, 120, prevStandings.getName(i), Color.WHITE, color, textFont);
+			modFields[i] = initTextField(row, 40, "-", Color.WHITE, color, textFont);
+			modFields[i].setHorizontalAlignment(JLabel.CENTER);
 			infoFields[i] = initTextField(row, 100, prevStandings.getTime(i), Color.WHITE, color, textFont);
 			intervalFields[i] = initTextField(row, 100, "-", Color.WHITE, color, textFont);
 			gapFields[i] = initTextField(row, 100, "-", Color.WHITE, color, textFont);
@@ -162,7 +166,19 @@ public class FormulaSimu extends JPanel {
 					for (int i = 0; i < drivers.length; ++i) {
 						driverFields[i].setText(s.getName(i));
 						infoFields[i].setText(s.getTime(i));
-						Color color = Color.YELLOW;
+						Color color = Color.WHITE;
+						int delta = s.getDelta(i);
+						if (delta > 0) {
+							modFields[i].setText(Integer.toString(delta) + "⮝");
+							color = Color.GREEN;
+						}
+						else if (delta < 0) {
+							modFields[i].setText(Integer.toString(-delta) + "⮟");
+							color = Color.RED;
+						}
+						else modFields[i].setText("-");
+						modFields[i].setForeground(color);
+						color = Color.YELLOW;
 						if (s.isDnf(s.getDriver(i))) color = Color.WHITE;
 						if (s.getDriver(i) == newBestLapDriver) color = Color.MAGENTA;
 						else if (personalBests.contains(s.getDriver(i))) color = Color.GREEN;

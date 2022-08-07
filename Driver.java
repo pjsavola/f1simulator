@@ -10,6 +10,8 @@ public class Driver {
 	private final int qualifying;
 	private final int defense = 80;
 	private final int overtaking = 80;
+	private int skillModifier;
+	private int formModifier;
 	private final Car car = new Car();
 	private Random r = FormulaSimu.random;
 
@@ -22,7 +24,7 @@ public class Driver {
 	}
 
 	public int getLapTime(Track track, boolean race) {
-		int skill = race ? getSkill() : qualifying;
+		int skill = race ? getSkill() : (qualifying - formModifier);
 		double standardDeviation = 1000 - 7.5 * consistency;
 		int idealLapTimeMs = track.getIdealLapTimeMs();
 		int lapTimeMs = idealLapTimeMs * 1050 / 1000 - idealLapTimeMs * skill / 2000;
@@ -45,10 +47,20 @@ public class Driver {
 	}
 
 	public int getSkill() {
-		return skill * car.getCondition() / 100;
+		return (skill + skillModifier - formModifier) * car.getCondition() / 100;
 	}
 
 	public void addDamage(int damage) {
 		car.addDamage(damage);
+	}
+
+	public void randomizeForm() {
+		int res = r.nextInt(6);
+		if (res == 0) --skillModifier;
+		else if (res == 5) ++skillModifier;
+	}
+
+	public void randomizeFormModifier() {
+		formModifier = r.nextInt(6);
 	}
 }

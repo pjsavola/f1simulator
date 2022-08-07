@@ -22,6 +22,7 @@ public class Standings {
 	private LapData[] lapData;
 	private final Standings previous;
 	private int bestLap = Integer.MAX_VALUE;
+	private final Driver[] grid;
 	
 	public Standings(Track track, Driver[] drivers) {
 		this.track = track;
@@ -33,8 +34,10 @@ public class Standings {
 			lapData[i].gap = lapTime;
 		}
 		sort();
+		grid = new Driver[len];
 		for (int i = 0; i < len; ++i) {
 			lapData[i].gap = i * 200;
+			grid[i] = lapData[i].driver;
 		}
 		previous = null;
 	}
@@ -48,6 +51,7 @@ public class Standings {
 		}
 		previous = s;
 		bestLap = s.bestLap;
+		grid = s.grid;
 	}
 	
 	public void addTime(Driver driver, int time) {
@@ -176,6 +180,7 @@ public class Standings {
 			}
 		}
 		for (int i = 0; i < len; ++i) {
+			lapData[i].driver.randomizeForm();
 			if (lapData[i].time < bestLap) {
 				bestLap = lapData[i].time;
 			}
@@ -188,6 +193,16 @@ public class Standings {
 
 	public Driver getDriver(int pos) {
 		return lapData[pos].driver;
+	}
+
+	public int getDelta(int pos) {
+		Driver d = lapData[pos].driver;
+		int[] positions = getPositions(d);
+		int delta = 0;
+		if (positions.length > 1) {
+			delta = positions[positions.length - 2] - positions[positions.length - 1];
+		}
+		return delta;
 	}
 	
 	public String getTime(int pos) {
@@ -257,13 +272,20 @@ public class Standings {
 	public int[] getPositions(Driver driver) {
 		int laps = getCompletedLapCount();
 		Standings s = this;
-		int[] data = new int[laps];
+		int[] data = new int[laps + 1];
 		for (int i = 0; i < laps; ++i) {
 			for (int j = 0; j < s.lapData.length; ++j) {
 				if (s.lapData[j].driver == driver) {
-					data[laps - 1 - i] = j;
+					data[laps - i] = j;
 					break;
 				}
+			}
+			s = s.previous;
+		}
+		for (int i = 0; i < grid.length; ++i) {
+			if (grid[i] == driver) {
+				data[0] = i;
+				break;
 			}
 		}
 		return data;
