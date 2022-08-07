@@ -173,9 +173,11 @@ public class Standings {
 				//System.err.println("Queue losses for " + lapData[i].driver.getName() + ": " + loss);
 				lapData[i].gap += loss;
 				lapData[i].time += loss;
-				if (lapData[i].time < bestLap) {
-					bestLap = lapData[i].time;
-				}
+			}
+		}
+		for (int i = 0; i < len; ++i) {
+			if (lapData[i].time < bestLap) {
+				bestLap = lapData[i].time;
 			}
 		}
 	}
