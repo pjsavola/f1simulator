@@ -49,6 +49,31 @@ public class FormulaSimu extends JPanel {
 	public static void main(String[] args) {
 		final int lapCount = 44;
 		Track track = new Track(lapCount, getLapTimeMs(1, 44), 500);
+
+		final Driver[] drivers = new Driver[20];
+		drivers[0] = new Driver("Max", "Verstappen", 96, 95, 94);
+		drivers[1] = new Driver("Sergio", "Perez", 90, 90, 90);
+		drivers[2] = new Driver("Charles", "Leclerc", 93, 89, 96);
+		drivers[3] = new Driver("Carlos", "Sainz", 90, 89, 93);
+		drivers[4] = new Driver("Lewis", "Hamilton", 94, 90, 92);
+		drivers[5] = new Driver("George", "Russell", 91, 96, 94);
+		drivers[6] = new Driver("Lando", "Norris", 88, 90, 93);
+		drivers[7] = new Driver("Daniel", "Ricciardo", 86, 82, 88);
+		drivers[8] = new Driver("Fernando", "Alonso", 91, 93, 91);
+		drivers[9] = new Driver("Esteban", "Ocon", 89, 90, 88);
+		drivers[10] = new Driver("Valtteri", "Bottas", 90, 88, 87);
+		drivers[11] = new Driver("Guanyu", "Zhou", 88, 83, 86);
+		drivers[12] = new Driver("Mick", "Schumacher", 87, 79, 87);
+		drivers[13] = new Driver("Kevin", "Magnussen", 89, 85, 88);
+		drivers[14] = new Driver("Sebastian", "Vettel", 88, 90, 84);
+		drivers[15] = new Driver("Lance", "Stroll", 87, 86, 84);
+		drivers[16] = new Driver("Pierre", "Gasly", 88, 90, 86);
+		drivers[17] = new Driver("Yuki", "Tsunoda", 88, 88, 87);
+		drivers[18] = new Driver("Alexander", "Albon", 89, 90, 88);
+		drivers[19] = new Driver("Nicholas", "Latifi", 83, 78, 86);
+		
+		prevStandings = new Standings(track, drivers);
+
 		//Driver lewis = new Driver("Lewis", "Hamilton", 95, 95);
 		//Driver max = new Driver("Max", "Verstappen", 96, 93);
 		
@@ -71,7 +96,6 @@ public class FormulaSimu extends JPanel {
 		initTextField(header, 100, "SPEED", Color.LIGHT_GRAY, Color.BLACK, headerFont);
         p.add(header);
 
-		final Driver[] drivers = new Driver[20];
 		JLabel[] posFields = new JLabel[drivers.length];
 		JLabel[] driverFields = new JLabel[drivers.length];
 		JLabel[] infoFields = new JLabel[drivers.length];
@@ -84,16 +108,14 @@ public class FormulaSimu extends JPanel {
 			row.setBackground(color);
 			posFields[i] = initTextField(row, 40, Integer.toString(i + 1), Color.CYAN, color, textFont);
 			posFields[i].setHorizontalAlignment(JLabel.CENTER);
-			drivers[i] = new Driver(Character.toString((char) ('A' + i)), "Player", 80 + i, 100 - i);
-			driverFields[i] = initTextField(row, 120, drivers[i].getName(), Color.WHITE, color, textFont);
-			infoFields[i] = initTextField(row, 100, "-", Color.WHITE, color, textFont);
+			//drivers[i] = new Driver(Character.toString((char) ('A' + i)), "Player", 80 + i, 100 - i);
+			driverFields[i] = initTextField(row, 120, prevStandings.getName(i), Color.WHITE, color, textFont);
+			infoFields[i] = initTextField(row, 100, prevStandings.getTime(i), Color.WHITE, color, textFont);
 			intervalFields[i] = initTextField(row, 100, "-", Color.WHITE, color, textFont);
 			gapFields[i] = initTextField(row, 100, "-", Color.WHITE, color, textFont);
 			speedFields[i] = initTextField(row, 100, Integer.toString(drivers[i].getSkill()), Color.WHITE, color, textFont);
 			p.add(row);
 		}
-		prevStandings = new Standings(track, drivers);
-		prevStandings.resolve(false);
 
         GridLayout layout = new GridLayout(drivers.length + 1, 1);
         p.setLayout(layout);
@@ -114,11 +136,11 @@ public class FormulaSimu extends JPanel {
 
 					Standings s = new Standings(prevStandings);
 					for (int i = 0; i < drivers.length; ++i) {
-						int time = drivers[i].getLapTime(track);
+						int time = drivers[i].getLapTime(track, true);
 						if (lap == 0) time += 5000;
 						s.addTime(drivers[i], time);
 					}
-					s.resolve(true);
+					s.resolve();
 
 					int bestLap = prevStandings.getBestLap();
 					Driver newBestLapDriver = null;

@@ -7,19 +7,22 @@ public class Driver {
 	private final String surname;
 	private final int skill;
 	private final int consistency;
+	private final int qualifying;
 	private final int defense = 80;
 	private final int overtaking = 80;
 	private final Car car = new Car();
 	private Random r = FormulaSimu.random;
 
-	public Driver(String firstName, String surname, int skill, int consistency) {
+	public Driver(String firstName, String surname, int skill, int consistency, int qualifying) {
 		this.firstName = firstName;
 		this.surname = surname;
 		this.skill = skill;
 		this.consistency = consistency;
+		this.qualifying = qualifying;
 	}
 
-	public int getLapTime(Track track) {
+	public int getLapTime(Track track, boolean race) {
+		int skill = race ? this.skill : qualifying;
 		double standardDeviation = 1000 - 7.5 * consistency;
 		int idealLapTimeMs = track.getIdealLapTimeMs();
 		int lapTimeMs = idealLapTimeMs * 1050 / 1000 - idealLapTimeMs * getSkill() / 2000;
