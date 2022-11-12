@@ -174,7 +174,8 @@ public class FormulaSimu extends JPanel {
 					int bestLap = prevStandings.getBestLap();
 					Driver newBestLapDriver = null;
 					Set<Driver> personalBests = new HashSet<>();
-					for (Driver driver : drivers) {
+					for (int i = 0; i < drivers.length; ++i) {
+						Driver driver = prevStandings.getDriver(i);
 						int personalBest = Arrays.stream(prevStandings.getTimes(driver)).min().orElse(Integer.MAX_VALUE);
 						int best = Arrays.stream(s.getTimes(driver)).min().orElse(Integer.MAX_VALUE);
 						if (best < personalBest) {

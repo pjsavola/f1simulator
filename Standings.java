@@ -25,6 +25,7 @@ public class Standings {
 	private LapData[] lapData;
 	private final Standings previous;
 	private int bestLap = Integer.MAX_VALUE;
+	private Driver bestLapDriver = null;
 	private final Driver[] grid;
 	
 	public Standings(Track track, Driver[] drivers) {
@@ -54,6 +55,7 @@ public class Standings {
 		}
 		previous = s;
 		bestLap = s.bestLap;
+		bestLapDriver = s.bestLapDriver;
 		grid = s.grid;
 	}
 	
@@ -186,6 +188,7 @@ public class Standings {
 			lapData[i].driver.randomizeForm();
 			if (lapData[i].time < bestLap) {
 				bestLap = lapData[i].time;
+				bestLapDriver = lapData[i].driver;
 			}
 		}
 	}
@@ -320,9 +323,9 @@ public class Standings {
 			FormulaSimu.initTextField(row, 40, Integer.toString(i + 1), Color.CYAN, color, FormulaSimu.textFont).setHorizontalAlignment(JLabel.CENTER);
 			FormulaSimu.initTextField(row, 120, getName(i), Color.WHITE, color, FormulaSimu.textFont);
 			FormulaSimu.initTextField(row, 100, getGap(i), Color.WHITE, color, FormulaSimu.textFont);
-			final int bestLap = getBestLap();
-			final OptionalInt personalBest = Arrays.stream(getTimes(getDriver(i))).min();
-			final boolean purple = personalBest.isPresent() && personalBest.getAsInt() == bestLap;
+			final Driver driver = getDriver(i);
+			final OptionalInt personalBest = Arrays.stream(getTimes(driver)).min();
+			final boolean purple = bestLapDriver == driver;
 			final String lapString = personalBest.isPresent() ? FormulaSimu.lapTimeToString(personalBest.getAsInt()) : "-";
 			FormulaSimu.initTextField(row, 100, lapString, purple ? Color.MAGENTA : Color.WHITE, color, FormulaSimu.textFont);
 			summary.add(row);
