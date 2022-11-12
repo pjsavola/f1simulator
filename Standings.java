@@ -1,6 +1,9 @@
 package simu;
 
+import javax.swing.*;
+import java.awt.*;
 import java.util.Arrays;
+import java.util.OptionalInt;
 import java.util.function.Function;
 
 public class Standings {
@@ -246,11 +249,13 @@ public class Standings {
 		int laps = getCompletedLapCount();
 		Standings s = this;
 		int[] data = new int[laps];
+		int limit = data.length;
 		for (int i = 0; i < laps; ++i) {
 			for (int j = 0; j < s.lapData.length; ++j) {
 				if (s.lapData[j].driver == driver) {
 					if (s.lapData[j].dnfPos >= 0) {
-						return Arrays.stream(data).limit(i).toArray();
+						--limit;
+						break;
 					}
 					data[laps - 1 - i] = f.apply(s.lapData[j]);
 					break;
@@ -258,7 +263,7 @@ public class Standings {
 			}
 			s = s.previous;
 		}
-		return data;
+		return Arrays.stream(data).limit(limit).toArray();
 	}
 
 	public int[] getTimes(Driver driver) {
@@ -293,5 +298,38 @@ public class Standings {
 
 	public int getBestLap() {
 		return bestLap;
+	}
+
+	public JPanel toPanel() {
+		final JPanel header = new JPanel();
+		header.setBackground(Color.BLACK);
+		FormulaSimu.initTextField(header, 40, "POS", Color.LIGHT_GRAY, Color.BLACK, FormulaSimu.headerFont).setHorizontalAlignment(JLabel.CENTER);
+		FormulaSimu.initTextField(header, 120, "NAME", Color.LIGHT_GRAY, Color.BLACK, FormulaSimu.headerFont);
+		FormulaSimu.initTextField(header, 100, "INTERVAL", Color.LIGHT_GRAY, Color.BLACK, FormulaSimu.headerFont);
+		FormulaSimu.initTextField(header, 100, "BEST", Color.LIGHT_GRAY, Color.BLACK, FormulaSimu.headerFont);
+
+		final JPanel summary = new JPanel();
+		FormulaSimu.initTextField(summary, 360, track.getName(), Color.YELLOW, Color.BLACK, FormulaSimu.titleFont).setHorizontalAlignment(JLabel.CENTER);
+		summary.setBackground(Color.BLACK);
+		summary.add(header);
+
+		for (int i = 0; i < grid.length; ++i) {
+			final JPanel row = new JPanel();
+			final Color color = i % 2 == 0 ? FormulaSimu.bgColor : Color.BLACK;
+			row.setBackground(color);
+			FormulaSimu.initTextField(row, 40, Integer.toString(i + 1), Color.CYAN, color, FormulaSimu.textFont).setHorizontalAlignment(JLabel.CENTER);
+			FormulaSimu.initTextField(row, 120, getName(i), Color.WHITE, color, FormulaSimu.textFont);
+			FormulaSimu.initTextField(row, 100, getGap(i), Color.WHITE, color, FormulaSimu.textFont);
+			final int bestLap = getBestLap();
+			final OptionalInt personalBest = Arrays.stream(getTimes(getDriver(i))).min();
+			final boolean purple = personalBest.isPresent() && personalBest.getAsInt() == bestLap;
+			final String lapString = personalBest.isPresent() ? FormulaSimu.lapTimeToString(personalBest.getAsInt()) : "-";
+			FormulaSimu.initTextField(row, 100, lapString, purple ? Color.MAGENTA : Color.WHITE, color, FormulaSimu.textFont);
+			summary.add(row);
+		}
+
+		final GridLayout layout = new GridLayout(grid.length + 2, 1);
+		summary.setLayout(layout);
+		return summary;
 	}
 }

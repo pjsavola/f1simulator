@@ -19,7 +19,11 @@ public class FormulaSimu extends JPanel {
 	private static Standings prevStandings;
 
 	public static Random random = new Random();
-	
+	public static final Color bgColor = new Color(0x222222);
+	public static final Font headerFont = new Font(Font.SANS_SERIF, Font.BOLD, 12);
+	public static final Font textFont = new Font(Font.SANS_SERIF, Font.BOLD, 12);
+	public static final Font titleFont = new Font(Font.SANS_SERIF, Font.BOLD, 20);
+
 	public static int getLapTimeMs(int minutes, int seconds) {
 		return 1000 * (60 * minutes + seconds);
 	}
@@ -47,8 +51,8 @@ public class FormulaSimu extends JPanel {
 	}
 	
 	public static void main(String[] args) {
-		final int lapCount = 44;
-		Track track = new Track(lapCount, getLapTimeMs(1, 44), 500);
+		Season season = new Season();
+		season.addTrack(new Track("Spa", 44, getLapTimeMs(1, 44), 500));
 
 		final Driver[] drivers = new Driver[20];
 		drivers[0] = new Driver("Max", "Verstappen", 96, 95, 94);
@@ -71,20 +75,36 @@ public class FormulaSimu extends JPanel {
 		drivers[17] = new Driver("Yuki", "Tsunoda", 88, 88, 87);
 		drivers[18] = new Driver("Alexander", "Albon", 89, 90, 88);
 		drivers[19] = new Driver("Nicholas", "Latifi", 83, 78, 86);
-		
+
+		Track track = season.nextTrack();
 		prevStandings = new Standings(track, drivers);
 
 		//Driver lewis = new Driver("Lewis", "Hamilton", 95, 95);
 		//Driver max = new Driver("Max", "Verstappen", 96, 93);
+
+
+		{
+			JPanel header = new JPanel();
+			header.setBackground(Color.BLACK);
+			initTextField(header, 40, "POS", Color.LIGHT_GRAY, Color.BLACK, headerFont).setHorizontalAlignment(JLabel.CENTER);
+			initTextField(header, 120, "NAME", Color.LIGHT_GRAY, Color.BLACK, headerFont);
+			initTextField(header, 100, "INTERVAL", Color.LIGHT_GRAY, Color.BLACK, headerFont);
+			initTextField(header, 100, "BEST", Color.LIGHT_GRAY, Color.BLACK, headerFont);
+			for (int i = 0; i < season.getTrackCount(); ++i) {
+				//initTextField(header, 40, Integer.toString(i + 1), Color.LIGHT_GRAY, Color.BLACK, headerFont);
+			}
+			season.add(header);
+			season.setBackground(Color.BLACK);
+			season.setBorder(new EmptyBorder(5, 5, 5, 5));
+			GridLayout layout = new GridLayout(drivers.length + 1, 1);
+			season.setLayout(layout);
+		}
 		
         final JFrame f = new JFrame();
         f.setTitle("F1 Simulator");
         final FormulaSimu p = new FormulaSimu();
         p.setBackground(Color.BLACK);
         p.setBorder(new EmptyBorder(5, 5, 5, 5));
-        final Font headerFont = new Font("Tahoma", Font.BOLD, 12);
-        final Font textFont = new Font("Tahoma", Font.BOLD, 12);
-        final Color bgColor = new Color(0x222222);
 
         JPanel header = new JPanel();
         header.setBackground(Color.BLACK);
@@ -136,7 +156,12 @@ public class FormulaSimu extends JPanel {
 			public void keyPressed(KeyEvent e) {
 				if (e.getKeyCode() == KeyEvent.VK_ENTER) {
 					int lap = prevStandings.getCompletedLapCount();
-					if (lapCount == lap) return;
+					if (track.getLapCount() == lap) {
+						season.save(prevStandings);
+						f.setContentPane(prevStandings.toPanel());
+						f.pack();
+						return;
+					}
 
 					Standings s = new Standings(prevStandings);
 					for (int i = 0; i < drivers.length; ++i) {
@@ -169,11 +194,11 @@ public class FormulaSimu extends JPanel {
 						Color color = Color.WHITE;
 						int delta = s.getDelta(i);
 						if (delta > 0) {
-							modFields[i].setText(Integer.toString(delta) + "⮝");
+							modFields[i].setText(Integer.toString(delta) + "▴");
 							color = Color.GREEN;
 						}
 						else if (delta < 0) {
-							modFields[i].setText(Integer.toString(-delta) + "⮟");
+							modFields[i].setText(Integer.toString(-delta) + "▾");
 							color = Color.RED;
 						}
 						else modFields[i].setText("-");
@@ -208,7 +233,7 @@ public class FormulaSimu extends JPanel {
         f.setVisible(true);
 	}
 	
-	private static JLabel initTextField(JPanel parent, int width, String text, Color fontColor, Color bgColor, Font font) {
+	public static JLabel initTextField(JPanel parent, int width, String text, Color fontColor, Color bgColor, Font font) {
 		JLabel field = new JLabel(text);
 		field.setForeground(fontColor);
 		field.setBackground(bgColor);
