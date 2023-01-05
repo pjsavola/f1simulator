@@ -2,7 +2,10 @@ package simu;
 
 import javax.swing.*;
 import java.awt.*;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Arrays;
+import java.util.Map;
 import java.util.OptionalInt;
 import java.util.function.Function;
 
@@ -334,5 +337,22 @@ public class Standings {
 		final GridLayout layout = new GridLayout(grid.length + 2, 1);
 		summary.setLayout(layout);
 		return summary;
+	}
+
+	void addPoints(Map<Driver, Integer> points, Map<Driver, List<Integer>> positionMap) {
+		int[] dist = {25, 18, 15, 12, 10, 8, 6, 4, 2, 1};
+		for (int i = 0; i < grid.length; ++i) {
+			final Driver driver = getDriver(i);
+			positionMap.get(driver).add(i);
+			if (i >= dist.length) {
+				continue;
+			}
+			final boolean purple = bestLapDriver == driver;
+			Integer pts = points.get(driver);
+			if (purple) {
+				pts = pts + 1;
+			}
+			points.put(driver, pts + dist[i]);
+		}
 	}
 }

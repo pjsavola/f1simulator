@@ -1,11 +1,12 @@
 package simu;
-import java.awt.Color;
-import java.awt.Dimension;
-import java.awt.Font;
-import java.awt.GridLayout;
+import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.util.*;
+import java.util.List;
+import java.util.stream.Collectors;
 
 import javax.swing.JFrame;
 import javax.swing.JLabel;
@@ -51,8 +52,33 @@ public class FormulaSimu extends JPanel {
 	}
 	
 	public static void main(String[] args) {
+		final JFrame f = new JFrame();
+
 		Season season = new Season();
 		season.addTrack(new Track("Spa", 44, getLapTimeMs(1, 44), 500));
+
+		final MenuBar menuBar = new MenuBar();
+		final Menu resultMenu = new Menu("Results");
+
+		final MenuItem totalStandingsItem = new MenuItem("Show Standings");
+		resultMenu.add(totalStandingsItem);
+
+		for (int trackIndex = 0; trackIndex < season.getTrackCount(); ++trackIndex) {
+			final Track track = season.getTrack(trackIndex);
+			MenuItem resultItem = new MenuItem((trackIndex + 1) + " - " + track.getName());
+			resultItem.setEnabled(false);
+			resultMenu.add(resultItem);
+			final int idx = trackIndex;
+			resultItem.addActionListener(e -> {
+				Standings standings = season.getStandings(idx);
+				if (standings != null) {
+					f.setContentPane(standings.toPanel());
+					f.pack();
+				}
+			});
+		}
+
+		f.setMenuBar(menuBar);
 
 		final Driver[] drivers = new Driver[20];
 		drivers[0] = new Driver("Max", "Verstappen", 96, 95, 94);
@@ -76,46 +102,115 @@ public class FormulaSimu extends JPanel {
 		drivers[18] = new Driver("Alexander", "Albon", 89, 90, 88);
 		drivers[19] = new Driver("Nicholas", "Latifi", 83, 78, 86);
 
+		totalStandingsItem.addActionListener(e -> {
+			showStandings(f, season, drivers);
+		});
+
+		final Menu actionMenu = new Menu("Actions");
+		final MenuItem nextRaceItem = new MenuItem("Next Race");
+		nextRaceItem.addActionListener(e -> {
+			final int completedCount = season.getCompletedTrackCount();
+			final MenuItem currentTrackItem = resultMenu.getItem(completedCount);
+			startRace(season, drivers, f, currentTrackItem, nextRaceItem, totalStandingsItem);
+		});
+		actionMenu.add(nextRaceItem);
+		menuBar.add(actionMenu);
+		menuBar.add(resultMenu);
+
+		showStandings(f, season, drivers);
+
+        f.setTitle("F1 Simulator");
+		f.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
+        f.setLocationRelativeTo(null);
+        f.setVisible(true);
+	}
+
+	public static void showStandings(JFrame f, Season season, Driver[] drivers) {
+		JPanel standingsPanel = new JPanel();
+		JPanel header = new JPanel();
+		header.setBackground(Color.BLACK);
+		Map<Driver, Integer> pointMap = new HashMap<>();
+		Map<Driver, List<Integer>> positionMap = new HashMap<>();
+		for (int i = 0; i < drivers.length; ++i) {
+			pointMap.put(drivers[i], 0);
+			positionMap.put(drivers[i], new ArrayList<>());
+		}
+
+		initTextField(header, 40, "POS", Color.LIGHT_GRAY, Color.BLACK, headerFont).setHorizontalAlignment(JLabel.CENTER);
+		initTextField(header, 120, "NAME", Color.LIGHT_GRAY, Color.BLACK, headerFont);
+		for (int i = 0; i < season.getTrackCount(); ++i) {
+			initTextField(header, 40, Integer.toString(i + 1), Color.LIGHT_GRAY, Color.BLACK, headerFont);
+			if (i < season.getCompletedTrackCount()) {
+				final Standings standings = season.getStandings(i);
+				standings.addPoints(pointMap, positionMap);
+			}
+		}
+		initTextField(header, 60, "TOTAL", Color.LIGHT_GRAY, Color.BLACK, headerFont);
+		standingsPanel.add(header);
+
+		List<Driver> driverList = Arrays.stream(drivers).sorted((d1, d2) -> {
+			int pts1 = pointMap.get(d1);
+			int pts2 = pointMap.get(d2);
+			if (pts1 == pts2) {
+				for (int pos = 0; pos < drivers.length; ++pos) {
+					final int finalPos = pos;
+					long posCount1 = positionMap.get(d1).stream().filter(p -> p == finalPos).count();
+					long posCount2 = positionMap.get(d2).stream().filter(p -> p == finalPos).count();
+					if (posCount1 != posCount2) {
+						return (int) (posCount2 - posCount1);
+					}
+				}
+				return 0;
+			}
+			return pts2 - pts1;
+		}).toList();
+
+		int[] dist = {25, 18, 15, 12, 10, 8, 6, 4, 2, 1};
+		for (int i = 0; i < driverList.size(); ++i) {
+			final Driver driver = driverList.get(i);
+			JPanel row = new JPanel();
+			Color color = i % 2 == 0 ? bgColor : Color.BLACK;
+			row.setBackground(color);
+			initTextField(row, 40, Integer.toString(i + 1), Color.CYAN, color, textFont).setHorizontalAlignment(JLabel.CENTER);
+			initTextField(row, 120, drivers[i].getName(), Color.WHITE, color, textFont);
+			for (int j = 0; j < season.getTrackCount(); ++j) {
+				final List<Integer> positions = positionMap.get(driver);
+				final int pts = j < positions.size() ? (positions.get(j) < dist.length ? dist[positions.get(j)] : 0) : 0;
+				initTextField(row, 40, pts == 0 ? "-" : Integer.toString(pts), Color.LIGHT_GRAY, Color.BLACK, textFont);
+			}
+			initTextField(row, 60, pointMap.get(driver).toString(), Color.LIGHT_GRAY, Color.BLACK, textFont);
+			standingsPanel.add(row);
+		}
+
+		standingsPanel.setBackground(Color.BLACK);
+		standingsPanel.setBorder(new EmptyBorder(5, 5, 5, 5));
+		GridLayout layout = new GridLayout(drivers.length + 1, 1);
+		standingsPanel.setLayout(layout);
+		f.setContentPane(standingsPanel);
+		f.pack();
+	}
+
+	public static void startRace(Season season, Driver[] drivers, JFrame f, MenuItem currentTrackItem, MenuItem startItem, MenuItem totalStandingsItem) {
+		startItem.setEnabled(false);
+		totalStandingsItem.setEnabled(false);
+
 		Track track = season.nextTrack();
 		prevStandings = new Standings(track, drivers);
 
-		//Driver lewis = new Driver("Lewis", "Hamilton", 95, 95);
-		//Driver max = new Driver("Max", "Verstappen", 96, 93);
+		final FormulaSimu p = new FormulaSimu();
+		p.setBackground(Color.BLACK);
+		p.setBorder(new EmptyBorder(5, 5, 5, 5));
 
-
-		{
-			JPanel header = new JPanel();
-			header.setBackground(Color.BLACK);
-			initTextField(header, 40, "POS", Color.LIGHT_GRAY, Color.BLACK, headerFont).setHorizontalAlignment(JLabel.CENTER);
-			initTextField(header, 120, "NAME", Color.LIGHT_GRAY, Color.BLACK, headerFont);
-			initTextField(header, 100, "INTERVAL", Color.LIGHT_GRAY, Color.BLACK, headerFont);
-			initTextField(header, 100, "BEST", Color.LIGHT_GRAY, Color.BLACK, headerFont);
-			for (int i = 0; i < season.getTrackCount(); ++i) {
-				//initTextField(header, 40, Integer.toString(i + 1), Color.LIGHT_GRAY, Color.BLACK, headerFont);
-			}
-			season.add(header);
-			season.setBackground(Color.BLACK);
-			season.setBorder(new EmptyBorder(5, 5, 5, 5));
-			GridLayout layout = new GridLayout(drivers.length + 1, 1);
-			season.setLayout(layout);
-		}
-		
-        final JFrame f = new JFrame();
-        f.setTitle("F1 Simulator");
-        final FormulaSimu p = new FormulaSimu();
-        p.setBackground(Color.BLACK);
-        p.setBorder(new EmptyBorder(5, 5, 5, 5));
-
-        JPanel header = new JPanel();
-        header.setBackground(Color.BLACK);
-        initTextField(header, 40, "POS", Color.LIGHT_GRAY, Color.BLACK, headerFont).setHorizontalAlignment(JLabel.CENTER);
-        initTextField(header, 120, "NAME", Color.LIGHT_GRAY, Color.BLACK, headerFont);
-        initTextField(header, 40, "MOD", Color.LIGHT_GRAY, Color.BLACK, headerFont);
-        initTextField(header, 100, "TIME", Color.LIGHT_GRAY, Color.BLACK, headerFont);
-        initTextField(header, 100, "INTERVAL", Color.LIGHT_GRAY, Color.BLACK, headerFont);
+		JPanel header = new JPanel();
+		header.setBackground(Color.BLACK);
+		initTextField(header, 40, "POS", Color.LIGHT_GRAY, Color.BLACK, headerFont).setHorizontalAlignment(JLabel.CENTER);
+		initTextField(header, 120, "NAME", Color.LIGHT_GRAY, Color.BLACK, headerFont);
+		initTextField(header, 40, "MOD", Color.LIGHT_GRAY, Color.BLACK, headerFont);
+		initTextField(header, 100, "TIME", Color.LIGHT_GRAY, Color.BLACK, headerFont);
+		initTextField(header, 100, "INTERVAL", Color.LIGHT_GRAY, Color.BLACK, headerFont);
 		initTextField(header, 100, "GAP", Color.LIGHT_GRAY, Color.BLACK, headerFont);
 		initTextField(header, 100, "SPEED", Color.LIGHT_GRAY, Color.BLACK, headerFont);
-        p.add(header);
+		p.add(header);
 
 		JLabel[] posFields = new JLabel[drivers.length];
 		JLabel[] driverFields = new JLabel[drivers.length];
@@ -141,11 +236,11 @@ public class FormulaSimu extends JPanel {
 			p.add(row);
 		}
 
-        GridLayout layout = new GridLayout(drivers.length + 1, 1);
-        p.setLayout(layout);
+		GridLayout layout = new GridLayout(drivers.length + 1, 1);
+		p.setLayout(layout);
 		//p.setPreferredSize(new Dimension(600, 550));
 		Map<Driver, Integer> prevSpeeds = new HashMap<>();
-        f.addKeyListener(new KeyListener() {
+		f.addKeyListener(new KeyListener() {
 			@Override
 			public void keyTyped(KeyEvent e) {
 			}
@@ -157,9 +252,6 @@ public class FormulaSimu extends JPanel {
 				if (e.getKeyCode() == KeyEvent.VK_ENTER) {
 					int lap = prevStandings.getCompletedLapCount();
 					if (track.getLapCount() == lap) {
-						season.save(prevStandings);
-						f.setContentPane(prevStandings.toPanel());
-						f.pack();
 						return;
 					}
 
@@ -224,14 +316,18 @@ public class FormulaSimu extends JPanel {
 					}
 					p.repaint();
 					prevStandings = s;
+
+					if (track.getLapCount() == lap + 1) {
+						season.save(prevStandings);
+						currentTrackItem.setEnabled(true);
+						startItem.setEnabled(season.getCompletedTrackCount() < season.getTrackCount());
+						totalStandingsItem.setEnabled(true);
+					}
 				}
 			}
 		});
-        f.setContentPane(p);
-        f.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
-        f.pack();
-        f.setLocationRelativeTo(null);
-        f.setVisible(true);
+		f.setContentPane(p);
+		f.pack();
 	}
 	
 	public static JLabel initTextField(JPanel parent, int width, String text, Color fontColor, Color bgColor, Font font) {

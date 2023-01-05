@@ -25,7 +25,27 @@ public class Season extends JPanel {
     }
 
     public void save(Standings standings) {
-        this.standings.add(standings);
+        if (this.standings.size() < index) {
+            this.standings.add(standings);
+        }
+    }
+
+    public int getCompletedTrackCount() {
+        return standings.size();
+    }
+
+    public Track getTrack(int index) {
+        if (index >= tracks.size()) {
+            return null;
+        }
+        return tracks.get(index);
+    }
+
+    public Standings getStandings(int index) {
+        if (index >= standings.size()) {
+            return null;
+        }
+        return standings.get(index);
     }
 
 }
